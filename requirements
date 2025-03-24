@@ -1,3 +1,5 @@
 requests
 colorama
 wafw00f
+python-telegram-bot
+python-dotenv

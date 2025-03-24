@@ -1,4 +1,5 @@
 import requests
+import os
 from Header import Parser
 import re
 from adder import Adder
@@ -8,17 +9,19 @@ from Waf import Waf_Detect
 from optparse import OptionParser
 import subprocess
 import sys
+import json
+import tempfile
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
 
-print(Fore.LIGHTBLUE_EX + """
+print(Fore.LIGHTRED_EX + r"""
                  _     _ _______ _______  _    _ _____ ______  _______ _______
                   \___/  |______ |______   \  /    |   |_____] |______ |______
                  _/   \_ ______| ______|    \/   __|__ |_____] |______ ______|
                                  #Harmonizing Web Safety
                                   #Author: Faiyaz Ahmad
             """ + Fore.WHITE)
-
 
 parser = OptionParser()
 
@@ -59,6 +62,16 @@ if threads > 10:
 
 if crawl:
     filename = f"{url.split('://')[1]}_katana"
+
+
+def send_alert(url, key, payload):
+    message = f"[XSS DETECTED]\nURL: {url}\nPARAMETER: {key}\nPAYLOAD USED: {payload}"
+    load_dotenv()
+    bot_token = os.getenv('BOT_TOKEN')
+    chat_id = os.getenv('CHAT_ID')
+    send_text = f'https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={chat_id}&text={message}'
+    response = requests.get(send_text)
+    return response.json()
 
 class Main:
 
@@ -270,7 +283,8 @@ class Main:
         return payload_list
 
 
-    def scanner(self,url):
+
+    def scanner(self, url):
         print(Fore.WHITE + f"[+] TESTING {url}")
         if waf:
             print(Fore.LIGHTGREEN_EX + "[+] DETECTING WAF")
@@ -281,33 +295,27 @@ class Main:
                 print(Fore.LIGHTGREEN_EX + f"[+] NO WAF FOUND! GOING WITH THE NORMAL PAYLOADS")
                 firewall = None
         elif custom_waf:
-            #print(1)
             firewall = custom_waf
         else:
             firewall = None
         out = self.fuzzer(url)
-       # print(out)
         for data in out:
             for key in data:
-                payload_list = self.filter_payload(data[key],firewall)
-                #print(f"[+] TESTING THE BELOW PAYLOADS {payload_list}")
+                payload_list = self.filter_payload(data[key], firewall)
             for payload in payload_list:
                 try:
-                    #print(f"Testing: {payload}")
-                    data = self.parser(url,key,payload)
+                    data = self.parser(url, key, payload)
                     parsed_data = urlparse(url)
-                    new_url = parsed_data.scheme +  "://" + parsed_data.netloc + parsed_data.path
-                    #print(new_url)
-                    #print(data)
+                    new_url = parsed_data.scheme + "://" + parsed_data.netloc + parsed_data.path
                     if self.headers:
-                        #print("I am here")
-                        response = requests.get(new_url,params=data, headers=self.headers,verify=False).text
+                        response = requests.get(new_url, params=data, headers=self.headers, verify=False).text
                     else:
-                        response = requests.get(new_url, params=data,verify=False).text
+                        response = requests.get(new_url, params=data, verify=False).text
                     if payload in response:
                         print(Fore.RED + f"[+] VULNERABLE: {url}\nPARAMETER: {key}\nPAYLOAD USED: {payload}")
-                        print(self.replace(url,key,payload))
-                        self.result.append(self.replace(url,key,payload))
+                        print(self.replace(url, key, payload))
+                        self.result.append(self.replace(url, key, payload))
+                        send_alert(url, key, payload)  # Menggunakan fungsi send_alert yang baru
                         return True
                 except Exception as e:
                     print(e)
