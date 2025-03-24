@@ -43,22 +43,27 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Kirim hasil scan ke pengguna
         if result.returncode == 0:
-            # Baca hasil scan dari file output
-            with open(output_file, "r") as f:
-                scan_result = f.read()
-            
-            # Kirim hasil scan sebagai pesan teks
-            await update.message.reply_text(f"Scan selesai!\nHasil:\n{scan_result}")
-            
-            # Kirim file hasil scan ke pengguna
-            with open(output_file, "rb") as f:
-                await update.message.reply_document(document=f, filename=output_file)
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                # Baca hasil scan dari file output
+                with open(output_file, "r") as f:
+                    scan_result = f.read()
+                
+                # Kirim hasil scan sebagai pesan teks
+                await update.message.reply_text(f"Scan selesai!\nHasil:\n{scan_result}")
+                
+                # Kirim file hasil scan ke pengguna
+                with open(output_file, "rb") as f:
+                    await update.message.reply_document(document=f, filename=output_file)
+            else:
+                await update.message.reply_text("Scan selesai, tetapi tidak ada kerentanan yang ditemukan.")
         else:
             await update.message.reply_text(f"Error:\n{result.stderr}")
         
         # Hapus file setelah selesai diproses
-        os.remove(file_path)
-        os.remove(output_file)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if os.path.exists(output_file):
+            os.remove(output_file)
     except Exception as e:
         await update.message.reply_text(f"Terjadi kesalahan: {str(e)}")
 
@@ -89,21 +94,25 @@ async def scan_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Kirim hasil scan ke pengguna
         if result.returncode == 0:
-            # Baca hasil scan dari file output
-            with open(output_file, "r") as f:
-                scan_result = f.read()
-            
-            # Kirim hasil scan sebagai pesan teks
-            await update.message.reply_text(f"Scan selesai!\nHasil:\n{scan_result}")
-            
-            # Kirim file hasil scan ke pengguna
-            with open(output_file, "rb") as f:
-                await update.message.reply_document(document=f, filename=output_file)
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                # Baca hasil scan dari file output
+                with open(output_file, "r") as f:
+                    scan_result = f.read()
+                
+                # Kirim hasil scan sebagai pesan teks
+                await update.message.reply_text(f"Scan selesai!\nHasil:\n{scan_result}")
+                
+                # Kirim file hasil scan ke pengguna
+                with open(output_file, "rb") as f:
+                    await update.message.reply_document(document=f, filename=output_file)
+            else:
+                await update.message.reply_text("Scan selesai, tetapi tidak ada kerentanan yang ditemukan.")
         else:
             await update.message.reply_text(f"Error:\n{result.stderr}")
         
         # Hapus file hasil scan setelah dikirim
-        os.remove(output_file)
+        if os.path.exists(output_file):
+            os.remove(output_file)
     except Exception as e:
         await update.message.reply_text(f"Terjadi kesalahan: {str(e)}")
 
