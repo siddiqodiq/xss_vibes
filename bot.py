@@ -4,7 +4,6 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 
-# Token bot Anda
 # Load environment variables from .env file
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
@@ -15,9 +14,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Halo! Saya bot XSS Scanner. Gunakan perintah berikut:\n"
         "1. Kirim file .txt berisi URL untuk memulai scan.\n"
         "2. Gunakan perintah /scan dengan sintaks berikut:\n"
-        "/scan -u <URL> -o <output> [-t <threads>] [-H <headers>] [--crawl]\n"
+        "/scan -u <URL> -o <output> [-t <threads>] [-H <headers>] [--crawl] [--waf] [-w <waf_name>]\n"
         "Contoh:\n"
         "/scan -u http://example.com -o result.txt\n"
+        "/scan -u http://example.com -o result.txt --waf\n"
+        "/scan -u http://example.com -o result.txt -w cloudflare\n"
         "/scan -f urls.txt -o result.txt -t 5\n"
         "/scan -f urls.txt -H \"Cookies:test=123, User-Agent: Mozilla/Firefox\" -t 7 -o result.txt"
     )
@@ -66,6 +67,20 @@ async def scan_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Ambil argumen dari pesan pengguna
         args = update.message.text.split()[1:]
+        
+        # Periksa apakah ada argumen --waf atau -w
+        if "--waf" in args:
+            # Jika --waf digunakan, tambahkan ke perintah
+            args.append("--waf")
+        elif "-w" in args:
+            # Jika -w digunakan, pastikan ada nilai WAF yang diberikan
+            waf_index = args.index("-w")
+            if waf_index + 1 < len(args):
+                waf_name = args[waf_index + 1]
+                args.extend(["-w", waf_name])
+            else:
+                await update.message.reply_text("Error: Nama WAF tidak diberikan setelah -w.")
+                return
         
         # Jalankan perintah scan menggunakan argumen yang diberikan
         output_file = "scan_result.txt"
